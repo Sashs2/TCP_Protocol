@@ -2,9 +2,13 @@
 using System.IO;
 using System.Net.Sockets;
 using System.Net;
+using System.Runtime.Serialization.Formatters.Binary;
+using SharedData;
 
 namespace tcp_client
 {
+  
+
     class Program
     {
         // адрес и порт сервера, к которому будем подключаться
@@ -19,32 +23,38 @@ namespace tcp_client
             
             client.Connect(ipPoint);
 
-            string message = "";
+         
+
             try
             {
-                while (message != "end")
+                Request request = new Request();
+                do
                 {
-                    Console.Write("Enter a message:");
-                    message = Console.ReadLine();
+
+
+                    Console.WriteLine("A:");
+                    request.A = double.Parse(Console.ReadLine());
+                    Console.WriteLine("B:");
+                    request.B = double.Parse(Console.ReadLine());
+                    Console.WriteLine("Operation[1-4]:");
+                    request.Operation = (OperationType)Enum.Parse(typeof(OperationType), Console.ReadLine());
+
 
                     NetworkStream ns = client.GetStream();
-
-                 
-                    StreamWriter sw = new StreamWriter(ns);
-                    sw.WriteLine(message);//Hello
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    formatter.Serialize(ns, request);
 
 
-                    sw.Flush();  
 
-                    
+
 
                     StreamReader sr = new StreamReader(ns);
                     string response = sr.ReadLine();
 
                     Console.WriteLine("server response: " + response);
 
-                  
-                }
+
+                } while (request.A != 0 || request.B != 0);
             }
             catch (Exception ex)
             {

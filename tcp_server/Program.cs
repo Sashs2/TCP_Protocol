@@ -1,7 +1,9 @@
-﻿using System;
+﻿using SharedData;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace tcp_server
 {
@@ -13,43 +15,56 @@ namespace tcp_server
             // получаем адреса для запуска сокета
             IPAddress iPAddress = IPAddress.Parse("127.0.0.1");//Dns.GetHostEntry("localhost").AddressList[1]; //localhost
             IPEndPoint ipPoint = new IPEndPoint(iPAddress, port);
-       TcpListener listener = new TcpListener(ipPoint); // bind
+            TcpListener listener = new TcpListener(ipPoint); // bind
 
-            try
+
+            listener.Start(10);
+            while (true)
             {
-               
-                listener.Start(10);
-
                 Console.WriteLine("Server started! Waiting for connection...");
-                 TcpClient client = listener.AcceptTcpClient();
+                TcpClient client = listener.AcceptTcpClient();
 
-                while (client.Connected)
+                try
                 {
+                    while (client.Connected)
+                    {
 
-                    NetworkStream ns = client.GetStream();
+                        NetworkStream ns = client.GetStream();
+                        BinaryFormatter formatter = new BinaryFormatter();
+                        var request = (Request)formatter.Deserialize(ns);
 
 
-                    StreamReader sr = new StreamReader(ns);
-                    string response = sr.ReadLine();
+                        Console.WriteLine($"Request data: {request.A} {request.B} from {client.Client.LocalEndPoint}");
 
-                    Console.WriteLine($"{client.Client.RemoteEndPoint} - {response} at {DateTime.Now.ToShortTimeString()}");
 
-                    string message = "Message was send!";
 
-                    StreamWriter sw = new StreamWriter(ns);
-                    sw.WriteLine(message);
 
-                    sw.Flush();
+                        double res = 0;
+                        switch (request.Operation)
+                        {
+                            case OperationType.Add: res = request.A + request.B; break;
+                            case OperationType.Sub: res = request.A - request.B; break;
+                            case OperationType.Mult: res = request.A * request.B; break;
+                            case OperationType.Div: res = request.A / request.B; break;
+                        }
 
+                        string message = $"Result= {res}";
+
+                        StreamWriter sw = new StreamWriter(ns);
+                        sw.WriteLine(message);
+
+                        sw.Flush();
+
+                    }
+
+                    client.Close();
                 }
-                
-                client.Close();
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                listener.Stop();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            listener.Stop();
         }
     }
 }
